@@ -286,6 +286,11 @@ function iniciarLogin(onOk) {
       reset = true; $("btnClave").click();
     }
   };
+  $("btnVer").onclick = () => {
+    const ver = $("pass").type === "password";
+    $("pass").type = ver ? "text" : "password";
+    $("btnVer").textContent = ver ? "🙈" : "👁";
+  };
   let registro = false;
   $("btnModo").onclick = () => {
     registro = !registro;
@@ -299,7 +304,7 @@ function iniciarLogin(onOk) {
     $("loginErr").textContent = "";
     $("btnLogin").disabled = true;
     try {
-      const email = $("email").value.trim(), pass = $("pass").value;
+      const email = $("email").value.trim().toLowerCase(), pass = $("pass").value;
       if (registro) {
         const dentro = await API.signup(email, pass, $("invite").value.trim());
         if (!dentro) { $("loginErr").textContent = "Revisa tu correo para confirmar la cuenta y luego entra aquí."; return; }

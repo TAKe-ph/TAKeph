@@ -17,8 +17,11 @@
 
   <section id="vLogin" class="card hidden">
     <h2>Entrar</h2>
-    <input id="email" type="email" placeholder="Correo" autocomplete="username">
-    <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <input id="email" type="email" placeholder="Correo" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="input-row">
+      <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="btnVer" class="secondary mic" type="button" title="Ver contraseña">👁</button>
+    </div>
     <input id="invite" type="text" placeholder="Código de invitación" autocomplete="off" class="hidden">
     <button id="btnLogin" class="primary">Entrar</button>
     <button id="btnModo" class="link">¿No tienes cuenta? Crear una</button>
