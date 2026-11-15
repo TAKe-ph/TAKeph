@@ -110,3 +110,8 @@ La cámara solo funciona en páginas **https**, así que hay que publicarla:
 - Los títulos usados recientemente salen como botones: un toque y la foto queda guardada.
 - **Sin título**: se usa la fecha y la hora. **Repetir**: vuelve a abrir la cámara.
 - También funciona con los PDF del escáner.
+
+## Versión 5: editar
+- Móvil → **✏️ Editar** (junto a las carpetas): toca una carpeta para **cambiarle el nombre** (también a sus fotos pendientes), **quitarla de la lista** o **borrar sus fotos pendientes**.
+- Móvil → **Últimas subidas**: toca una foto para **cambiarle el nombre**, **moverla a otra carpeta** o **borrarla**.
+- Solo se puede mientras la foto no ha llegado al PC. Si ya llegó (💻), se cambia en el Explorador de Windows.

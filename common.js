@@ -190,6 +190,20 @@ const API = {
     if (!r.ok) throw new Error("Error al borrar: " + (await r.text()));
   },
 
+  // Renombrar / mover un archivo que aún está en internet
+  async move(from, to) {
+    const r = await fetch(`${this.base}/storage/v1/object/move`, {
+      method: "POST",
+      headers: await this.headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ bucketId: CONFIG.BUCKET, sourceKey: from, destinationKey: to }),
+    });
+    if (r.ok) return;
+    const t = await r.text();
+    if (r.status === 401) { this.logout(); throw new Error("NO_SESSION"); }
+    if (r.status === 404 || /not.?found/i.test(t)) throw new Error("YA_DESCARGADA");
+    throw new Error("No se pudo cambiar: " + t);
+  },
+
   // Datos del usuario (para comprobar que la clave de cifrado es la misma en todos tus aparatos)
   async getMeta() {
     const r = await fetch(`${this.base}/auth/v1/user`, { headers: await this.headers() });

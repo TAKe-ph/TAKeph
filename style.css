@@ -71,3 +71,10 @@ details.grupo ul { margin-top: 6px; }
 .titulo-panel { padding: 0 12px; }
 .titulo-panel input { font-size: 1.1rem; }
 .titulo-panel .chips { margin-bottom: 4px; }
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 48; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--card); color: var(--txt); width: 100%; max-width: 560px; border-radius: 18px 18px 0 0; padding: 16px 14px calc(env(safe-area-inset-bottom) + 14px); }
+.sheet-title { white-space: pre-line; font-weight: 700; text-align: center; margin: 0 0 12px; overflow-wrap: anywhere; }
+.sheet .link { width: 100%; padding: 12px; }
+.danger { background: var(--err); color: #fff; font-weight: 600; }
+.chips.editando button { outline: 2px dashed var(--pri); }
+#historial li.tocable { cursor: pointer; }

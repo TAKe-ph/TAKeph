@@ -47,7 +47,10 @@
     <section class="card">
       <div class="row-between">
         <label for="carpeta">Carpeta (en el PC)</label>
-        <button id="btnNueva" class="link">➕ Nueva carpeta</button>
+        <span>
+          <button id="btnEditar" class="link">✏️ Editar</button>
+          <button id="btnNueva" class="link">➕ Nueva</button>
+        </span>
       </div>
       <div class="input-row">
         <input id="carpeta" list="carpetasList" placeholder="Ej: Muestra 1" autocomplete="off">
@@ -65,6 +68,7 @@
 
     <section class="card">
       <h2>Últimas subidas <span id="pendCount" class="badge hidden"></span></h2>
+      <p class="muted small-txt">Toca una foto para cambiarle el nombre, moverla o borrarla (mientras no haya llegado al PC).</p>
       <ul id="historial" class="list"></ul>
     </section>
   </main>
@@ -106,6 +110,15 @@
       <button id="tituloOk" class="primary">✅ Guardar</button>
     </div>
   </section>
+
+  <!-- MENÚ DE OPCIONES -->
+  <div id="vMenu" class="sheet-bg hidden">
+    <div class="sheet">
+      <p id="menuTitulo" class="sheet-title"></p>
+      <div id="menuOpciones" class="botones"></div>
+      <button id="menuCancelar" class="link">Cancelar</button>
+    </div>
+  </div>
 
   <input id="inFoto" type="file" accept="image/*" capture="environment" hidden>
   <input id="inScan" type="file" accept="image/*" capture="environment" hidden>

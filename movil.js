@@ -22,7 +22,10 @@ function pintarCarpetas() {
     const b = document.createElement("button");
     b.textContent = c;
     b.className = c === $("carpeta").value ? "on" : "";
-    b.onclick = () => { $("carpeta").value = c; pintarCarpetas(); };
+    b.onclick = () => {
+      if (editando) return menuCarpeta(c);
+      $("carpeta").value = c; pintarCarpetas();
+    };
     $("chips").appendChild(b);
   });
 }
@@ -96,6 +99,121 @@ function pedirTitulo(blobPrevia, onRepetir) {
   });
 }
 
+// ---------- Menú inferior ----------
+function menu(titulo, opciones) {
+  $("menuTitulo").textContent = titulo;
+  const cont = $("menuOpciones");
+  cont.innerHTML = "";
+  opciones.forEach((o) => {
+    const b = document.createElement("button");
+    b.className = (o.peligro ? "danger" : "secondary") + " big";
+    b.textContent = o.txt;
+    b.onclick = async () => {
+      cerrarMenu();
+      try { await o.fn(); } catch (e) { toast(e.message === "NO_SESSION" ? "Vuelve a entrar" : e.message); }
+    };
+    cont.appendChild(b);
+  });
+  $("vMenu").classList.remove("hidden");
+}
+function cerrarMenu() { $("vMenu").classList.add("hidden"); }
+$("menuCancelar").onclick = cerrarMenu;
+$("vMenu").onclick = (e) => { if (e.target === $("vMenu")) cerrarMenu(); };
+
+// ---------- Editar carpetas ----------
+let editando = false;
+$("btnEditar").onclick = () => {
+  editando = !editando;
+  $("btnEditar").textContent = editando ? "✅ Hecho" : "✏️ Editar";
+  $("chips").classList.toggle("editando", editando);
+  if (editando) toast("Toca una carpeta para cambiarla o quitarla");
+};
+function quitarCarpetaDeLista(c) {
+  const l = carpetasRecientes().filter((x) => x !== c);
+  try { localStorage.setItem("fotopc_carpetas", JSON.stringify(l)); } catch (e) {}
+  if ($("carpeta").value === c) $("carpeta").value = l[0] || "";
+  pintarCarpetas();
+}
+function fotosDe(c) { return hist().filter((x) => editable(x) && x.vista.startsWith(c + "/")); }
+function menuCarpeta(c) {
+  const n = fotosDe(c).length;
+  menu(`📁 ${c}`, [
+    { txt: "✏️ Cambiar nombre", fn: async () => {
+      const nueva = limpiarRuta(prompt("Nuevo nombre de la carpeta", c) || "");
+      if (!nueva || nueva === c) return;
+      const r = await moverFotos(fotosDe(c), (v) => nueva + v.slice(c.length));
+      const l = carpetasRecientes().map((x) => (x === c ? nueva : x));
+      try { localStorage.setItem("fotopc_carpetas", JSON.stringify([...new Set(l)])); } catch (e) {}
+      if ($("carpeta").value === c) $("carpeta").value = nueva;
+      pintarCarpetas();
+      toast(`📁 ${nueva}` + (r.enPC ? ` · ${r.enPC} ya estaban en el PC` : ""));
+    } },
+    { txt: "➖ Quitar de la lista", fn: () => quitarCarpetaDeLista(c) },
+    ...(n ? [{ txt: `🗑️ Borrar sus ${n} foto(s) pendientes`, peligro: true, fn: async () => {
+      if (!confirm(`¿Borrar ${n} foto(s) de "${c}" que aún no han llegado al PC?`)) return;
+      for (const x of fotosDe(c)) await borrarFoto(x);
+      quitarCarpetaDeLista(c);
+      toast("🗑️ Borradas");
+    } }] : []),
+  ]);
+}
+
+// ---------- Editar fotos (mientras no hayan llegado al PC) ----------
+function editable(x) { return x.vista && x.estado !== "enpc" && Cifra.esCifrado(x.path.split("/").pop()); }
+
+async function cambiarVista(x, nuevaVista) {
+  if (procesando) throw new Error("Espera un momento: se está subiendo");
+  const nuevoPath = `${API.uid()}/${await Cifra.cifrarNombre(nuevaVista)}`;
+  const enCola = await DB.get("cola", x.path);
+  if (enCola) {
+    await DB.del("cola", x.path);
+    await DB.put("cola", { ...enCola, id: nuevoPath, path: nuevoPath });
+  } else {
+    await API.move(x.path, nuevoPath);
+  }
+  guardarHist(hist().map((h) => (h.path === x.path ? { ...h, path: nuevoPath, vista: nuevaVista } : h)));
+}
+async function moverFotos(lista, nuevaVista) {
+  let enPC = 0;
+  for (const x of lista) {
+    try { await cambiarVista(x, nuevaVista(x.vista)); }
+    catch (e) { if (e.message === "YA_DESCARGADA") { enPC++; setHist(x.path, "enpc"); } else throw e; }
+  }
+  return { enPC };
+}
+async function borrarFoto(x) {
+  const enCola = await DB.get("cola", x.path);
+  if (enCola) await DB.del("cola", x.path);
+  else await API.remove([x.path]);
+  guardarHist(hist().filter((h) => h.path !== x.path));
+  actualizarPend();
+}
+function menuFoto(x) {
+  if (!editable(x)) { toast(x.estado === "enpc" ? "💻 Ya está en el PC: cámbiala desde el Explorador" : "Esta foto no se puede editar"); return; }
+  const partes = x.vista.split("/"), archivo = partes.pop(), carpeta = partes.join("/");
+  const punto = archivo.lastIndexOf("."), base = archivo.slice(0, punto), ext = archivo.slice(punto);
+  menu(`${archivo}\n📁 ${carpeta}`, [
+    { txt: "✏️ Cambiar nombre", fn: async () => {
+      const n = limpiarNombre(prompt("Nuevo nombre de la foto", base) || "");
+      if (!n || n === base) return;
+      const r = await moverFotos([x], () => `${carpeta}/${n}${ext}`);
+      toast(r.enPC ? "💻 Ya había llegado al PC: cámbiala allí" : `✏️ ${n}${ext}`);
+    } },
+    { txt: "📁 Mover a otra carpeta", fn: async () => {
+      const c = limpiarRuta(prompt("¿A qué carpeta?", carpeta) || "");
+      if (!c || c === carpeta) return;
+      const r = await moverFotos([x], () => `${c}/${archivo}`);
+      recordarCarpeta(c); $("carpeta").value = carpeta; pintarCarpetas();
+      toast(r.enPC ? "💻 Ya había llegado al PC: muévela allí" : `📁 Movida a ${c}`);
+    } },
+    { txt: "🗑️ Borrar", peligro: true, fn: async () => {
+      if (!confirm(`¿Borrar "${archivo}"?`)) return;
+      await borrarFoto(x);
+      toast("🗑️ Borrada");
+    } },
+  ]);
+}
+
 function carpetaActual() {
   const c = limpiarRuta($("carpeta").value) || "Sin_carpeta";
   $("carpeta").value = c;
@@ -112,12 +230,13 @@ function pintarHist() {
   const ul = $("historial");
   const h = hist();
   ul.innerHTML = h.length ? "" : '<li class="muted">Todavía no hay nada.</li>';
-  const icono = { pendiente: "⏳", subida: "✅", error: "⚠️" };
+  const icono = { pendiente: "⏳", subida: "✅", error: "⚠️", enpc: "💻" };
   h.forEach((x) => {
     const li = document.createElement("li");
     const partes = (x.vista || x.path).split("/");
     li.innerHTML = `<span>${icono[x.estado] || ""}</span>
       <span class="grow"><b>${partes.pop()}</b><br><small class="muted">${partes.join("/")}</small></span>`;
+    if (editable(x)) { li.classList.add("tocable"); li.onclick = () => menuFoto(x); }
     ul.appendChild(li);
   });
 }
