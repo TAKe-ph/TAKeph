@@ -1,6 +1,6 @@
 -- ============================================================
---  FotoPC v2 · Varios usuarios + registro con código de invitación
---  Pégalo en Supabase → SQL Editor → Run (una sola vez)
+--  TAKePH · Varios usuarios + registro con código de invitación
+--  ✅ YA APLICADO en el proyecto (15-11-2026). Se guarda como referencia.
 -- ============================================================
 
 -- 1) Cada usuario solo ve, sube y borra SUS fotos
@@ -22,9 +22,10 @@ create policy "fotopc_borrar" on storage.objects for delete to authenticated
 create table if not exists public.fotopc_invitacion (codigo text primary key);
 alter table public.fotopc_invitacion enable row level security;
 
--- 👇 CAMBIA ESTE CÓDIGO por el que quieras dar a tus compañeros
-insert into public.fotopc_invitacion (codigo) values ('MUESTRAS2026')
-on conflict do nothing;
+-- El código real NO se guarda aquí (este repositorio es público).
+-- Para poner o cambiar el código, en Supabase → SQL Editor:
+--   insert into public.fotopc_invitacion (codigo) values ('TU-CODIGO');
+--   update public.fotopc_invitacion set codigo = 'NUEVO';
 
 -- 3) Bloquear registros sin código válido
 create or replace function public.fotopc_comprobar_invitacion()

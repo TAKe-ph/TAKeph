@@ -125,3 +125,9 @@ La cámara solo funciona en páginas **https**, así que hay que publicarla:
 - **⚙️ Ajustes** (móvil): volver a poner la clave de cifrado y cerrar sesión.
 - Las carpetas admiten tildes y espacios («Armario pequeño»).
 - En el PC, la pestaña muestra cuántos archivos hay pendientes: «(3) TAKePH».
+
+## Estado de Supabase (configurado el 15-11-2026)
+- ✅ Cada usuario solo ve sus fotos (políticas por `auth.uid()`).
+- ✅ Registro solo con código de invitación (trigger `fotopc_invitacion_trg`). El código no está en este repositorio.
+- ✅ Borrado en el servidor: Edge Function `takeph-purgar` + pg_cron (`takeph-borrar-24h`, cada hora en el minuto 7).
+- Pendiente manual: Authentication → Sign In / Providers → activar «Allow new users to sign up» y desactivar «Confirm email».
