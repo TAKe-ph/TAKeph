@@ -80,7 +80,7 @@ details.grupo ul { margin-top: 6px; }
 #historial li.tocable { cursor: pointer; }
 .oculto { display: none !important; }
 #camStage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-#camVideo { width: 100%; height: 100%; object-fit: contain; background: #000; }
+#camVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 .cam-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 10px) 14px 8px; }
 .cam-carpeta { background: rgba(255,255,255,.15); color: #fff; font-weight: 600; border-radius: 99px; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
