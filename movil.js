@@ -524,10 +524,10 @@ async function guardarPagina() {
   })();
   return guardando;
 }
-$("scanRetry").onclick = pedirFotoScan;
-// En iPhone la cámara solo se abre si se pide en el mismo toque: primero la cámara, luego se guarda la página
+// "Repetir" y "+ Página" son <label for="inScan">: el propio iPhone abre la cámara al tocarlos
+$("scanRetry").onclick = () => { $("inScan").value = ""; };
 $("scanAdd").onclick = () => {
-  pedirFotoScan();
+  $("inScan").value = "";
   guardarPagina();
   toast(`📄 Página ${paginas.length + 1} añadida · haz la siguiente`);
 };

@@ -92,3 +92,7 @@ details.grupo ul { margin-top: 6px; }
 .disparo { width: 76px; height: 76px; border-radius: 50%; background: #fff; border: 5px solid #9ca3af; padding: 0; }
 .disparo:active { transform: scale(.92); }
 #tituloVid { max-width: 100%; max-height: 100%; border-radius: 10px; background: #000; }
+/* Evita el zoom por doble toque en el iPhone */
+html, body, button, label, input { touch-action: manipulation; }
+label.boton { display: flex; align-items: center; justify-content: center; margin: 0; border-radius: 10px; padding: 14px 8px; font-weight: 600; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.scan-bar > * { flex: 1; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self' https://*.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
@@ -94,8 +94,8 @@
       <button id="scanOk" class="primary">✂️ Recortar</button>
     </div>
     <div class="scan-bar hidden" id="scanBar2">
-      <button id="scanRetry" class="link">Repetir</button>
-      <button id="scanAdd" class="secondary">+ Página</button>
+      <label id="scanRetry" for="inScan" class="link boton">Repetir</label>
+      <label id="scanAdd" for="inScan" class="secondary boton">+ Página</label>
       <button id="scanFin" class="primary">Subir PDF (<span id="nPag">1</span>)</button>
     </div>
   </section>
