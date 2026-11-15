@@ -131,3 +131,11 @@ La cámara solo funciona en páginas **https**, así que hay que publicarla:
 - ✅ Registro solo con código de invitación (trigger `fotopc_invitacion_trg`). El código no está en este repositorio.
 - ✅ Borrado en el servidor: Edge Function `takeph-purgar` + pg_cron (`takeph-borrar-24h`, cada hora en el minuto 7).
 - Pendiente manual: Authentication → Sign In / Providers → activar «Allow new users to sign up» y desactivar «Confirm email».
+
+## Vídeos largos
+- Móvil → **🎬 Grabar vídeo** (o elegir uno de la galería). Se graba con la cámara normal del móvil, a la calidad que tenga.
+- Los vídeos de más de 40 MB se parten en **trozos de 40 MB**, cada uno cifrado por separado, porque el plan gratuito admite como máximo 50 MB por archivo. El PC los descarga y los vuelve a juntar en un solo archivo (`Muestra 1/Puerta.mov`).
+- Máximo por vídeo: 900 MB (el almacén gratuito es de 1 GB).
+- En el PC, mientras faltan trozos, sale «⏳ subiendo 3/8» y no se descarga hasta que están todos.
+- Los vídeos solo se pueden **borrar** desde el móvil (no renombrar ni mover).
+- Ojo: el plan gratuito incluye 5 GB de descarga al mes entre todos. Un vídeo de 2 min en 1080p ocupa unos 100–150 MB, así que salen unos 30–50 vídeos al mes.

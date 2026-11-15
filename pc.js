@@ -82,6 +82,8 @@ async function listarTodo(prefix = "") {
   return out;
 }
 
+// Se puede descargar: se puede abrir y, si es un vídeo en trozos, ya han llegado todos
+const listo = (a) => a.vista !== null && (!a.partes || a.completo);
 let ultimaPurga = 0;
 async function refrescar() {
   try {
@@ -89,14 +91,30 @@ async function refrescar() {
     if (Date.now() - ultimaPurga > 600000) { ultimaPurga = Date.now(); const n = await API.purgarAntiguas(24); if (n) log(`🧹 ${n} archivo(s) con más de 24 h borrados de internet`); }
     const lista = await listarTodo(uid);
     archivos = [];
+    const grupos = {};
     for (const a of lista) {
       const rel = a.path.slice(uid.length + 1);
       if (!rel.includes("/") && Cifra.esCifrado(rel)) {
-        try { archivos.push({ ...a, vista: await Cifra.descifrarNombre(rel), cifrado: true }); }
-        catch (e) { archivos.push({ ...a, vista: null, cifrado: true }); }   // otra clave
+        let nombre;
+        try { nombre = await Cifra.descifrarNombre(rel); }
+        catch (e) { archivos.push({ ...a, vista: null, cifrado: true }); continue; }   // otra clave
+        if (nombre.includes("\u0000")) {
+          // Trozo de un vídeo grande: se agrupan y se juntan al descargar
+          const [vista, grupo, i, n] = nombre.split("\u0000");
+          const g = grupos[grupo] || (grupos[grupo] = { vista, n: +n, partes: [], size: 0 });
+          g.partes.push({ path: a.path, i: +i });
+          g.size += a.size;
+        } else {
+          archivos.push({ ...a, vista: nombre, cifrado: true });
+        }
       } else {
         archivos.push({ ...a, vista: rel, cifrado: false });                 // archivos antiguos sin cifrar
       }
+    }
+    for (const g of Object.values(grupos)) {
+      g.partes.sort((x, y) => x.i - y.i);
+      archivos.push({ path: g.partes[0].path, vista: g.vista, size: g.size, cifrado: true,
+        partes: g.partes, n: g.n, completo: g.partes.length === g.n });
     }
   } catch (e) {
     if (e.message === "NO_SESSION") { volverLogin(); return; }
@@ -108,7 +126,7 @@ async function refrescar() {
 
 function pintarLista() {
   const cont = $("lista");
-  const n = archivos.filter((a) => a.vista !== null).length;
+  const n = archivos.filter(listo).length;
   document.title = (n ? `(${n}) ` : "") + "TAKePH – Recibir";
   if (!archivos.length) { cont.innerHTML = '<p class="muted">No hay nada pendiente. 👌</p>'; $("btnDescargar").disabled = true; return; }
   $("btnDescargar").disabled = false;
@@ -125,7 +143,7 @@ function pintarLista() {
     det.className = "grupo";
     const total = g.reduce((s, a) => s + a.size, 0);
     det.innerHTML = `<summary><span class="grow">📁 <b>${c}</b> <small class="muted">· ${g.length} archivo(s) · ${tamano(total)}</small></span></summary>
-      <ul class="list small">${g.map((a) => `<li><span class="grow">${a.vista ? a.vista.split("/").pop() : "🔒 archivo"}</span><small class="muted">${tamano(a.size)}</small></li>`).join("")}</ul>`;
+      <ul class="list small">${g.map((a) => `<li><span class="grow">${a.vista ? (a.partes ? "🎬 " : "") + a.vista.split("/").pop() : "🔒 archivo"}${a.partes && !a.completo ? ` <small class="muted">⏳ subiendo ${a.partes.length}/${a.n}</small>` : ""}</span><small class="muted">${tamano(a.size)}</small></li>`).join("")}</ul>`;
     const b = document.createElement("button");
     b.className = "secondary"; b.textContent = "⬇️ Esta carpeta";
     b.onclick = (e) => { e.preventDefault(); descargar(g); };
@@ -144,12 +162,22 @@ async function descargar(lista, auto = false) {
   ocupado = true;
   $("btnDescargar").disabled = true;
   let ok = 0;
-  for (const a of lista.filter((x) => x.vista !== null)) {
+  for (const a of lista.filter(listo)) {
     try {
-      let blob = await API.download(a.path);
-      if (a.cifrado) blob = await Cifra.descifrarBlob(blob);   // se descifra AQUÍ, en tu PC
+      let blob;
+      if (a.partes) {
+        const trozos = [];
+        for (const p of a.partes) {
+          log(`⬇️ ${a.vista.split("/").pop()}: parte ${p.i + 1}/${a.n}`);
+          trozos.push(await Cifra.descifrarBlob(await API.download(p.path)));
+        }
+        blob = new Blob(trozos);                                 // vídeo completo otra vez
+      } else {
+        blob = await API.download(a.path);
+        if (a.cifrado) blob = await Cifra.descifrarBlob(blob);   // se descifra AQUÍ, en tu PC
+      }
       const donde = await guardar(a.vista, blob);
-      await API.remove([a.path]);
+      await API.remove(a.partes ? a.partes.map((p) => p.path) : [a.path]);
       log(`✅ ${donde}`, "ok");
       ok++;
     } catch (e) {
@@ -177,7 +205,7 @@ $("chkAuto").onchange = async () => {
 setInterval(async () => {
   if (!$("chkAuto").checked || ocupado || $("vMain").classList.contains("hidden")) return;
   await refrescar();
-  if (archivos.some((a) => a.vista !== null)) descargar(archivos, true);
+  if (archivos.some(listo)) descargar(archivos, true);
 }, 20000);
 
 // ---------- Arranque ----------

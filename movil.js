@@ -80,10 +80,17 @@ function recordarTitulo(t) {
 function pedirTitulo(blobPrevia, onRepetir) {
   return new Promise((res) => {
     const url = URL.createObjectURL(blobPrevia);
-    $("tituloImg").src = url;
+    const esVideo = (blobPrevia.type || "").startsWith("video/");
+    $("tituloImg").classList.toggle("hidden", esVideo);
+    $("tituloVid").classList.toggle("hidden", !esVideo);
+    if (esVideo) $("tituloVid").src = url; else $("tituloImg").src = url;
     $("titulo").value = "";
     $("tituloRepetir").classList.toggle("hidden", !onRepetir);
-    const fin = (v) => { $("vTitulo").classList.add("hidden"); URL.revokeObjectURL(url); res(v); };
+    const fin = (v) => {
+      $("vTitulo").classList.add("hidden");
+      try { $("tituloVid").pause(); $("tituloVid").removeAttribute("src"); $("tituloVid").load(); } catch (e) {}
+      URL.revokeObjectURL(url); res(v);
+    };
     $("chipsTitulo").innerHTML = "";
     titulosRecientes().forEach((t) => {
       const b = document.createElement("button");
@@ -135,8 +142,9 @@ function quitarCarpetaDeLista(c) {
   pintarCarpetas();
 }
 function fotosDe(c) { return hist().filter((x) => editable(x) && x.vista.startsWith(c + "/")); }
+function todoDe(c) { return hist().filter((x) => borrable(x) && x.vista.startsWith(c + "/")); }
 function menuCarpeta(c) {
-  const n = fotosDe(c).length;
+  const n = todoDe(c).length;
   menu(`📁 ${c}`, [
     { txt: "✏️ Cambiar nombre", fn: async () => {
       const nueva = limpiarRuta(prompt("Nuevo nombre de la carpeta", c) || "");
@@ -151,7 +159,7 @@ function menuCarpeta(c) {
     { txt: "➖ Quitar de la lista", fn: () => quitarCarpetaDeLista(c) },
     ...(n ? [{ txt: `🗑️ Borrar sus ${n} foto(s) pendientes`, peligro: true, fn: async () => {
       if (!confirm(`¿Borrar ${n} foto(s) de "${c}" que aún no han llegado al PC?`)) return;
-      for (const x of fotosDe(c)) await borrarFoto(x);
+      for (const x of todoDe(c)) await borrarFoto(x);
       quitarCarpetaDeLista(c);
       toast("🗑️ Borradas");
     } }] : []),
@@ -159,7 +167,8 @@ function menuCarpeta(c) {
 }
 
 // ---------- Editar fotos (mientras no hayan llegado al PC) ----------
-function editable(x) { return x.vista && x.estado !== "enpc" && Cifra.esCifrado(x.path.split("/").pop()); }
+function editable(x) { return x.vista && !x.partes && x.estado !== "enpc" && Cifra.esCifrado(x.path.split("/").pop()); }
+function borrable(x) { return x.vista && x.estado !== "enpc" && Cifra.esCifrado(x.path.split("/").pop()); }
 
 async function cambiarVista(x, nuevaVista) {
   if (procesando) throw new Error("Espera un momento: se está subiendo");
@@ -182,13 +191,24 @@ async function moverFotos(lista, nuevaVista) {
   return { enPC };
 }
 async function borrarFoto(x) {
-  const enCola = await DB.get("cola", x.path);
-  if (enCola) await DB.del("cola", x.path);
-  else await API.remove([x.path]);
+  const enNube = [];
+  for (const p of x.partes || [x.path]) {
+    if (await DB.get("cola", p)) await DB.del("cola", p); else enNube.push(p);
+  }
+  if (enNube.length) await API.remove(enNube);
   guardarHist(hist().filter((h) => h.path !== x.path));
   actualizarPend();
 }
 function menuFoto(x) {
+  if (x.partes && borrable(x)) {
+    menu(`🎬 ${x.vista.split("/").pop()}`, [
+      { txt: "🗑️ Borrar vídeo", peligro: true, fn: async () => {
+        if (!confirm("¿Borrar este vídeo?")) return;
+        await borrarFoto(x); toast("🗑️ Borrado");
+      } },
+    ]);
+    return;
+  }
   if (!editable(x)) { toast(x.estado === "enpc" ? "💻 Ya está en el PC: cámbiala desde el Explorador" : "Esta foto no se puede editar"); return; }
   const partes = x.vista.split("/"), archivo = partes.pop(), carpeta = partes.join("/");
   const punto = archivo.lastIndexOf("."), base = archivo.slice(0, punto), ext = archivo.slice(punto);
@@ -223,7 +243,7 @@ function carpetaActual() {
 // ---------- Historial ----------
 function hist() { try { return JSON.parse(localStorage.getItem("fotopc_hist")) || []; } catch (e) { return []; } }
 function guardarHist(h) { try { localStorage.setItem("fotopc_hist", JSON.stringify(h.slice(0, 40))); } catch (e) {} pintarHist(); }
-function addHist(path, vista) { guardarHist([{ path, vista, estado: "pendiente", fecha: Date.now() }, ...hist()]); }
+function addHist(path, vista, partes) { guardarHist([{ path, vista, partes, estado: "pendiente", fecha: Date.now() }, ...hist()]); }
 function setHist(path, estado) { guardarHist(hist().map((x) => (x.path === path ? { ...x, estado } : x))); }
 
 function pintarHist() {
@@ -236,24 +256,41 @@ function pintarHist() {
     const partes = (x.vista || x.path).split("/");
     li.innerHTML = `<span>${icono[x.estado] || ""}</span>
       <span class="grow"><b>${partes.pop()}</b><br><small class="muted">${partes.join("/")}</small></span>`;
-    if (editable(x)) { li.classList.add("tocable"); li.onclick = () => menuFoto(x); }
+    if (borrable(x)) { li.classList.add("tocable"); li.onclick = () => menuFoto(x); }
     ul.appendChild(li);
   });
 }
 
 
 // ---------- Cola de subida ----------
+const PARTE = 40 * 1024 * 1024;          // límite gratuito de Supabase: 50 MB por archivo
+const MAX_TOTAL = 900 * 1024 * 1024;     // el almacén gratuito es de 1 GB
 async function encolar(blob, ext, tipo, titulo = "") {
   const carpeta = carpetaActual();
   recordarCarpeta(carpeta);
   const nombre = limpiarNombre(titulo);
   const vista = `${carpeta}/${nombre || sello() + "_" + rand()}.${ext}`;   // "Parte frontal.jpg"
   if (!Cifra.key) throw new Error("Falta la clave de cifrado");
+  if (blob.size > MAX_TOTAL) throw new Error(`Demasiado grande (${tamano(blob.size)}). Máximo ${tamano(MAX_TOTAL)} con el plan gratuito.`);
   // Se cifra AQUÍ, en el móvil: a internet solo llega contenido ilegible
-  const path = `${API.uid()}/${await Cifra.cifrarNombre(vista)}`;
-  const cifrado = await Cifra.cifrarBlob(blob);
-  await DB.put("cola", { id: path, path, blob: cifrado, type: "application/octet-stream", fecha: Date.now() });
-  addHist(path, vista);
+  const n = Math.max(1, Math.ceil(blob.size / PARTE));
+  if (n === 1) {
+    const path = `${API.uid()}/${await Cifra.cifrarNombre(vista)}`;
+    const cifrado = await Cifra.cifrarBlob(blob);
+    await DB.put("cola", { id: path, path, blob: cifrado, type: "application/octet-stream", fecha: Date.now() });
+    addHist(path, vista);
+  } else {
+    // Archivos grandes (vídeos): trozos de 40 MB, cada uno cifrado por separado. El PC los vuelve a juntar.
+    const grupo = rand() + rand(), partes = [], t0 = Date.now();
+    for (let i = 0; i < n; i++) {
+      const trozo = blob.slice(i * PARTE, Math.min(blob.size, (i + 1) * PARTE));
+      const path = `${API.uid()}/${await Cifra.cifrarNombre(`${vista}\u0000${grupo}\u0000${i}\u0000${n}`)}`;
+      await DB.put("cola", { id: path, path, blob: await Cifra.cifrarBlob(trozo), type: "application/octet-stream", fecha: t0 + i, hist: partes[0] || path });
+      partes.push(path);
+      toast(`🔐 Cifrando ${i + 1}/${n}…`, 3000);
+    }
+    addHist(partes[0], vista, partes);
+  }
   procesarCola();
 }
 
@@ -273,10 +310,13 @@ async function procesarCola() {
       try {
         await API.upload(it.path, it.blob, it.type);
         await DB.del("cola", it.id);
-        setHist(it.path, "subida");
+        if (it.hist) {
+          const quedan = (await DB.all("cola")).filter((q) => q.hist === it.hist).length;
+          if (!quedan) setHist(it.hist, "subida");
+        } else setHist(it.path, "subida");
       } catch (e) {
         if (e.message === "NO_SESSION") { toast("Sesión caducada: vuelve a entrar"); volverLogin(); break; }
-        setHist(it.path, navigator.onLine ? "error" : "pendiente");
+        setHist(it.hist || it.path, navigator.onLine ? "error" : "pendiente");
         if (!navigator.onLine) toast("Sin conexión: se subirá automáticamente");
         break;
       }
@@ -388,12 +428,28 @@ $("inFoto").onchange = async (e) => {
   } catch (err) { toast(err.message); }
 };
 
+function extDe(f, def) { const m = (f.name || "").match(/\.([a-z0-9]{1,5})$/i); return m ? m[1].toLowerCase() : def; }
+const abrirVideo = () => { $("inVideo").value = ""; $("inVideo").click(); };
+$("btnVideo").onclick = abrirVideo;
+$("inVideo").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const r = await pedirTitulo(f, abrirVideo);
+    if (r.repetir) return;
+    await encolar(f, extDe(f, "mp4"), f.type || "video/mp4", r.titulo);
+    recordarTitulo(limpiarNombre(r.titulo));
+    toast(`📤 Vídeo (${tamano(f.size)}) → ${carpetaActual()}`);
+  } catch (err) { toast(err.message, 5000); }
+};
+
 $("btnGaleria").onclick = () => { $("inGaleria").value = ""; $("inGaleria").click(); };
 $("inGaleria").onchange = async (e) => {
   const files = [...e.target.files];
   for (const f of files) {
     try {
       if (f.type === "application/pdf") await encolar(f, "pdf", "application/pdf");
+      else if ((f.type || "").startsWith("video/")) await encolar(f, extDe(f, "mp4"), f.type, "");
       else await encolar(await fotoAJpeg(f), "jpg", "image/jpeg");
     } catch (err) { toast(err.message); }
   }
