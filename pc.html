@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>FotoPC – Recibir en el PC</title>
+</head>
+<body class="pc">
+  <header>
+    <h1>💻 FotoPC · Recibir</h1>
+    <button id="btnSalir" class="link hidden">Salir</button>
+  </header>
+
+  <section id="vLogin" class="card hidden">
+    <h2>Entrar</h2>
+    <input id="email" type="email" placeholder="Correo" autocomplete="username">
+    <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <button id="btnLogin" class="primary">Entrar</button>
+    <p id="loginErr" class="err"></p>
+  </section>
+
+  <main id="vMain" class="hidden">
+    <section class="card">
+      <h2>1 · Carpeta de destino</h2>
+      <p id="destino" class="muted">Ninguna elegida todavía.</p>
+      <div class="row">
+        <button id="btnElegir" class="secondary">📁 Elegir carpeta</button>
+        <button id="btnReconectar" class="primary hidden">🔓 Dar permiso a la carpeta</button>
+      </div>
+      <p id="noFS" class="warn hidden">Este navegador no deja elegir carpeta: los archivos irán a «Descargas». Usa Chrome o Edge para guardarlos directamente en tu carpeta.</p>
+    </section>
+
+    <section class="card">
+      <h2>2 · Pendientes en internet <button id="btnRefrescar" class="link" title="Actualizar">↻</button></h2>
+      <div id="lista"><p class="muted">Cargando…</p></div>
+      <label class="check"><input type="checkbox" id="chkBorrar" checked> Borrar de internet después de descargar</label>
+      <label class="check"><input type="checkbox" id="chkAuto"> Descargar automáticamente cada 20 s (con esta pestaña abierta)</label>
+      <button id="btnDescargar" class="primary big">⬇️ Descargar todo</button>
+    </section>
+
+    <section class="card">
+      <h2>Registro</h2>
+      <ul id="log" class="list small"></ul>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+  <script src="pc.js"></script>
+</body>
+</html>

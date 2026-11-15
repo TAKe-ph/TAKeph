@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>FotoPC</title>
+</head>
+<body>
+  <header>
+    <h1>📷 FotoPC</h1>
+    <button id="btnSalir" class="link hidden">Salir</button>
+  </header>
+
+  <!-- LOGIN -->
+  <section id="vLogin" class="card hidden">
+    <h2>Entrar</h2>
+    <input id="email" type="email" placeholder="Correo" autocomplete="username">
+    <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <button id="btnLogin" class="primary">Entrar</button>
+    <p id="loginErr" class="err"></p>
+  </section>
+
+  <!-- PRINCIPAL -->
+  <main id="vMain" class="hidden">
+    <section class="card">
+      <label for="carpeta">Carpeta (en el PC)</label>
+      <input id="carpeta" list="carpetasList" placeholder="Ej: Obra Calle Mayor/Cuadro electrico" autocomplete="off">
+      <datalist id="carpetasList"></datalist>
+      <div id="chips" class="chips"></div>
+    </section>
+
+    <section class="botones">
+      <button id="btnFoto" class="primary big">📷 Hacer foto</button>
+      <button id="btnScan" class="secondary big">📄 Escanear documento</button>
+      <button id="btnGaleria" class="link">Subir desde la galería</button>
+    </section>
+
+    <section class="card">
+      <h2>Últimas subidas <span id="pendCount" class="badge hidden"></span></h2>
+      <ul id="historial" class="list"></ul>
+    </section>
+  </main>
+
+  <!-- ESCÁNER -->
+  <section id="vScan" class="overlay hidden">
+    <div class="scan-top"><span id="scanInfo">Arrastra las 4 esquinas al borde del papel</span></div>
+    <div id="scanStage"><canvas id="scanCanvas"></canvas></div>
+    <div id="filtros" class="chips center hidden">
+      <button data-f="color">Color</button>
+      <button data-f="doc" class="on">Documento</button>
+      <button data-f="bn">Blanco y negro</button>
+    </div>
+    <div class="scan-bar" id="scanBar1">
+      <button id="scanCancel" class="link">Cancelar</button>
+      <button id="scanOk" class="primary">✂️ Recortar</button>
+    </div>
+    <div class="scan-bar hidden" id="scanBar2">
+      <button id="scanRetry" class="link">Repetir</button>
+      <button id="scanAdd" class="secondary">+ Página</button>
+      <button id="scanFin" class="primary">Subir PDF (<span id="nPag">1</span>)</button>
+    </div>
+  </section>
+
+  <input id="inFoto" type="file" accept="image/*" capture="environment" hidden>
+  <input id="inScan" type="file" accept="image/*" capture="environment" hidden>
+  <input id="inGaleria" type="file" accept="image/*,application/pdf" multiple hidden>
+  <div id="toast" class="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="common.js"></script>
+  <script src="scan.js"></script>
+  <script src="movil.js"></script>
+</body>
+</html>
