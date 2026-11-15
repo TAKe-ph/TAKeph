@@ -108,27 +108,37 @@ function aplicarFiltro(src, f) {
     g[i] = y; hist[y]++;
   }
 
+  // Imagen integral: media local alrededor de cada píxel (sirve para quitar sombras)
+  const W1 = W + 1;
+  const I = new Uint32Array(W1 * (H + 1));
+  for (let y = 0; y < H; y++) {
+    let row = 0;
+    for (let x = 0; x < W; x++) {
+      row += g[y * W + x];
+      I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + row;
+    }
+  }
+  const media = (x, y, s) => {
+    const x1 = Math.max(0, x - s), x2 = Math.min(W - 1, x + s), y1 = Math.max(0, y - s), y2 = Math.min(H - 1, y + s);
+    const n = (x2 - x1 + 1) * (y2 - y1 + 1);
+    return (I[(y2 + 1) * W1 + x2 + 1] - I[y1 * W1 + x2 + 1] - I[(y2 + 1) * W1 + x1] + I[y1 * W1 + x1]) / n;
+  };
+
   if (f === "doc") {
-    // Estira contraste: tinta -> negro, papel -> blanco
-    const perc = (p) => { let acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n * p) return v; } return 255; };
-    const lo = perc(0.01);
-    const hi = Math.max(perc(0.7), lo + 40);
-    for (let i = 0; i < n; i++) {
-      let v = (g[i] - lo) * 255 / (hi - lo);
-      v = 255 * Math.pow(Math.min(1, Math.max(0, v / 255)), 1.3);
-      d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v;
+    // Divide cada píxel por el brillo del papel a su alrededor: la sombra desaparece y la tinta queda negra
+    const s = Math.max(10, (Math.max(W, H) / 12) | 0) >> 1;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const k = y * W + x;
+        const fondo = Math.max(1, media(x, y, s));
+        let r = (g[k] / fondo - 0.55) / (0.92 - 0.55);
+        r = r < 0 ? 0 : r > 1 ? 1 : r;
+        const v = 255 * Math.pow(r, 1.4);
+        d[k * 4] = d[k * 4 + 1] = d[k * 4 + 2] = v;
+      }
     }
   } else if (f === "bn") {
     // Umbral adaptativo (Bradley): aguanta sombras y luz irregular
-    const W1 = W + 1;
-    const I = new Uint32Array(W1 * (H + 1));
-    for (let y = 0; y < H; y++) {
-      let row = 0;
-      for (let x = 0; x < W; x++) {
-        row += g[y * W + x];
-        I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + row;
-      }
-    }
     const s = Math.max(8, (Math.max(W, H) / 16) | 0) >> 1;
     for (let y = 0; y < H; y++) {
       const y1 = Math.max(0, y - s), y2 = Math.min(H - 1, y + s);

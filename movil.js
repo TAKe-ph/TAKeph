@@ -462,28 +462,35 @@ let paginas = [];       // [{jpeg, w, h}]
 let recorte = null;     // canvas enderezado actual
 let filtro = "doc";
 let resultado = null;   // canvas con filtro
+let guardada = false;   // la página actual ya está añadida al PDF
+let guardando = null;   // promesa de la página que se está añadiendo
 
 function abrirScan() { $("vScan").classList.remove("hidden"); }
-function cerrarScan() { $("vScan").classList.add("hidden"); paginas = []; recorte = resultado = null; }
+function cerrarScan() { $("vScan").classList.add("hidden"); paginas = []; recorte = resultado = null; guardada = false; }
 function modoEsquinas() {
   $("scanInfo").textContent = "Arrastra las 4 esquinas al borde del papel";
   $("filtros").classList.add("hidden");
   $("scanBar1").classList.remove("hidden");
   $("scanBar2").classList.add("hidden");
 }
+function totalPaginas() { return paginas.length + (guardada ? 0 : 1); }
 function modoResultado() {
-  $("scanInfo").textContent = `Página ${paginas.length + 1}`;
+  $("scanInfo").textContent = `Página ${totalPaginas()}`;
   $("filtros").classList.remove("hidden");
   $("scanBar1").classList.add("hidden");
   $("scanBar2").classList.remove("hidden");
-  $("nPag").textContent = paginas.length + 1;
+  $("nPag").textContent = totalPaginas();
 }
 function pedirFotoScan() { $("inScan").value = ""; $("inScan").click(); }
 
 $("btnScan").onclick = () => { paginas = []; pedirFotoScan(); };
 $("inScan").onchange = async (e) => {
   const f = e.target.files[0];
-  if (!f) { if (!paginas.length) cerrarScan(); return; }
+  if (!f) {
+    if (!paginas.length && !guardada) cerrarScan();
+    else if (guardando) { await guardando; $("scanInfo").textContent = `${paginas.length} página(s) listas · pulsa «Subir PDF» o «+ Página»`; $("nPag").textContent = paginas.length; }
+    return;
+  }
   abrirScan();
   modoEsquinas();
   const c = await cargarImagen(f, 2400);
@@ -494,6 +501,7 @@ $("scanOk").onclick = () => {
   $("scanInfo").textContent = "Procesando…";
   setTimeout(() => {
     recorte = enderezar(editor.img, editor.q);
+    guardada = false;
     pintarFiltro();
     modoResultado();
   }, 30);
@@ -507,11 +515,22 @@ document.querySelectorAll("#filtros button").forEach((b) => {
   b.onclick = () => { filtro = b.dataset.f; pintarFiltro(); };
 });
 async function guardarPagina() {
-  const blob = await canvasABlob(resultado, 0.8);
-  paginas.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: resultado.width, h: resultado.height });
+  if (guardada) return guardando;
+  guardada = true;
+  const c = resultado;
+  guardando = (async () => {
+    const blob = await canvasABlob(c, 0.8);
+    paginas.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height });
+  })();
+  return guardando;
 }
 $("scanRetry").onclick = pedirFotoScan;
-$("scanAdd").onclick = async () => { await guardarPagina(); pedirFotoScan(); };
+// En iPhone la cámara solo se abre si se pide en el mismo toque: primero la cámara, luego se guarda la página
+$("scanAdd").onclick = () => {
+  pedirFotoScan();
+  guardarPagina();
+  toast(`📄 Página ${paginas.length + 1} añadida · haz la siguiente`);
+};
 $("scanFin").onclick = async () => {
   $("scanFin").disabled = true;
   try {
