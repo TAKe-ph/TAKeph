@@ -2,6 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
@@ -17,9 +19,24 @@
     <h2>Entrar</h2>
     <input id="email" type="email" placeholder="Correo" autocomplete="username">
     <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <input id="invite" type="text" placeholder="Código de invitación" autocomplete="off" class="hidden">
     <button id="btnLogin" class="primary">Entrar</button>
+    <button id="btnModo" class="link">¿No tienes cuenta? Crear una</button>
     <p id="loginErr" class="err"></p>
   </section>
+
+  <!-- CLAVE DE CIFRADO -->
+  <section id="vClave" class="card hidden">
+    <h2>🔐 Clave de cifrado</h2>
+    <p class="muted small-txt">Tus fotos se cifran en el móvil con esta clave y solo se abren en tu PC. Pon la <b>misma clave</b> en el móvil y en el PC. No se envía a ningún sitio: si la olvidas, las fotos pendientes no se pueden recuperar.</p>
+    <input id="frase" type="password" placeholder="Clave (mínimo 10 caracteres)" autocomplete="new-password">
+    <input id="frase2" type="password" placeholder="Repite la clave" autocomplete="new-password">
+    <button id="btnClave" class="primary">Guardar clave en este aparato</button>
+    <button id="btnClaveReset" class="link hidden">He olvidado la clave: empezar con una nueva</button>
+    <p id="claveErr" class="err"></p>
+  </section>
+
+  <p class="muted center-txt">📱 En el móvil abre este mismo enlace: se abrirá la cámara. <a href="index.html?movil">Ver versión móvil</a></p>
 
   <main id="vMain" class="hidden">
     <section class="card">
@@ -35,7 +52,7 @@
     <section class="card">
       <h2>2 · Pendientes en internet <button id="btnRefrescar" class="link" title="Actualizar">↻</button></h2>
       <div id="lista"><p class="muted">Cargando…</p></div>
-      <label class="check"><input type="checkbox" id="chkBorrar" checked> Borrar de internet después de descargar</label>
+      <p class="muted small-txt">🔐 Se descifran en este PC y se borran de internet al descargarlas. Lo que no se descargue se borra solo a las 24 h.</p>
       <label class="check"><input type="checkbox" id="chkAuto"> Descargar automáticamente cada 20 s (con esta pestaña abierta)</label>
       <button id="btnDescargar" class="primary big">⬇️ Descargar todo</button>
     </section>
@@ -50,6 +67,7 @@
 
   <script src="config.js"></script>
   <script src="common.js"></script>
+  <script src="crypto.js"></script>
   <script src="pc.js"></script>
 </body>
 </html>

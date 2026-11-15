@@ -2,6 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self' https://*.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.json">
@@ -9,6 +11,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
   <title>FotoPC</title>
+  <script src="redirect.js"></script>
 </head>
 <body>
   <header>
@@ -21,15 +24,35 @@
     <h2>Entrar</h2>
     <input id="email" type="email" placeholder="Correo" autocomplete="username">
     <input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <input id="invite" type="text" placeholder="Código de invitación" autocomplete="off" class="hidden">
     <button id="btnLogin" class="primary">Entrar</button>
+    <button id="btnModo" class="link">¿No tienes cuenta? Crear una</button>
     <p id="loginErr" class="err"></p>
   </section>
+
+  <!-- CLAVE DE CIFRADO -->
+  <section id="vClave" class="card hidden">
+    <h2>🔐 Clave de cifrado</h2>
+    <p class="muted small-txt">Tus fotos se cifran en el móvil con esta clave y solo se abren en tu PC. Pon la <b>misma clave</b> en el móvil y en el PC. No se envía a ningún sitio: si la olvidas, las fotos pendientes no se pueden recuperar.</p>
+    <input id="frase" type="password" placeholder="Clave (mínimo 10 caracteres)" autocomplete="new-password">
+    <input id="frase2" type="password" placeholder="Repite la clave" autocomplete="new-password">
+    <button id="btnClave" class="primary">Guardar clave en este aparato</button>
+    <button id="btnClaveReset" class="link hidden">He olvidado la clave: empezar con una nueva</button>
+    <p id="claveErr" class="err"></p>
+  </section>
+
 
   <!-- PRINCIPAL -->
   <main id="vMain" class="hidden">
     <section class="card">
-      <label for="carpeta">Carpeta (en el PC)</label>
-      <input id="carpeta" list="carpetasList" placeholder="Ej: Obra Calle Mayor/Cuadro electrico" autocomplete="off">
+      <div class="row-between">
+        <label for="carpeta">Carpeta (en el PC)</label>
+        <button id="btnNueva" class="link">➕ Nueva carpeta</button>
+      </div>
+      <div class="input-row">
+        <input id="carpeta" list="carpetasList" placeholder="Ej: Muestra 1" autocomplete="off">
+        <button id="btnMic" class="secondary mic" title="Dictar nombre">🎤</button>
+      </div>
       <datalist id="carpetasList"></datalist>
       <div id="chips" class="chips"></div>
     </section>
@@ -66,6 +89,24 @@
     </div>
   </section>
 
+  <!-- TÍTULO DE LA FOTO -->
+  <section id="vTitulo" class="overlay over2 hidden">
+    <div class="scan-top">¿Qué es esta foto?</div>
+    <div id="tituloStage"><img id="tituloImg" alt="Vista previa"></div>
+    <div class="titulo-panel">
+      <div class="input-row">
+        <input id="titulo" type="text" placeholder="Ej: Parte frontal" autocomplete="off" enterkeyhint="done">
+        <button id="btnMicTitulo" class="secondary mic" title="Dictar">🎤</button>
+      </div>
+      <div id="chipsTitulo" class="chips"></div>
+    </div>
+    <div class="scan-bar">
+      <button id="tituloRepetir" class="link">Repetir</button>
+      <button id="tituloSin" class="secondary">Sin título</button>
+      <button id="tituloOk" class="primary">✅ Guardar</button>
+    </div>
+  </section>
+
   <input id="inFoto" type="file" accept="image/*" capture="environment" hidden>
   <input id="inScan" type="file" accept="image/*" capture="environment" hidden>
   <input id="inGaleria" type="file" accept="image/*,application/pdf" multiple hidden>
@@ -73,6 +114,7 @@
 
   <script src="config.js"></script>
   <script src="common.js"></script>
+  <script src="crypto.js"></script>
   <script src="scan.js"></script>
   <script src="movil.js"></script>
 </body>

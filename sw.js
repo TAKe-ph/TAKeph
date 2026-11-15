@@ -1,7 +1,7 @@
 // Service worker: permite instalar la app y abrirla sin cobertura.
 // Cambia la versión cuando modifiques archivos para forzar la actualización.
-const VERSION = "fotopc-v1";
-const ARCHIVOS = ["./", "index.html", "style.css", "config.js", "common.js", "scan.js", "movil.js",
+const VERSION = "fotopc-v5";
+const ARCHIVOS = ["./", "index.html", "style.css", "config.js", "common.js", "scan.js", "movil.js", "crypto.js", "redirect.js",
   "manifest.json", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

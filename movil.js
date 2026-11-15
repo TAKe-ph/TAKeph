@@ -15,9 +15,10 @@ function recordarCarpeta(c) {
 }
 function pintarCarpetas() {
   const l = carpetasRecientes();
+  $("btnFoto").textContent = "📷 Foto → " + (limpiarRuta($("carpeta").value) || "Sin_carpeta");
   $("carpetasList").innerHTML = l.map((c) => `<option value="${c}">`).join("");
   $("chips").innerHTML = "";
-  l.slice(0, 6).forEach((c) => {
+  l.slice(0, 8).forEach((c) => {
     const b = document.createElement("button");
     b.textContent = c;
     b.className = c === $("carpeta").value ? "on" : "";
@@ -25,6 +26,76 @@ function pintarCarpetas() {
     $("chips").appendChild(b);
   });
 }
+// "Muestra 3" -> "Muestra 4"
+function siguienteNombre(c) {
+  const m = c.match(/^(.*?)(\d+)$/);
+  if (m) return m[1] + (parseInt(m[2], 10) + 1);
+  return c ? c + " 2" : "Muestra 1";
+}
+$("btnNueva").onclick = () => {
+  const n = prompt("Nombre de la nueva carpeta", siguienteNombre(limpiarRuta($("carpeta").value)));
+  if (n === null) return;
+  const c = limpiarRuta(n);
+  if (!c) return;
+  $("carpeta").value = c;
+  recordarCarpeta(c);
+  toast("📁 Ahora las fotos van a: " + c);
+};
+
+// ---------- Dictado por voz (si el navegador lo permite; si no, el 🎤 del teclado) ----------
+const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+function dictar(boton, alTexto) {
+  let r;
+  try { r = new Reconocedor(); } catch (e) { toast("Usa el 🎤 del teclado"); return; }
+  r.lang = "es-ES"; r.interimResults = false; r.maxAlternatives = 1;
+  boton.classList.add("escuchando");
+  toast("🎤 Habla ahora…", 4000);
+  r.onresult = (e) => {
+    const t = e.results[0][0].transcript.trim();
+    if (t) alTexto(t.charAt(0).toUpperCase() + t.slice(1));
+  };
+  r.onerror = () => toast("No se pudo usar el micro: usa el 🎤 del teclado");
+  r.onend = () => boton.classList.remove("escuchando");
+  r.start();
+}
+if (!Reconocedor) { $("btnMic").classList.add("hidden"); $("btnMicTitulo").classList.add("hidden"); }
+// Carpeta por voz. Di "barra" para subcarpetas: "Obra Mayor barra Cuadro"
+$("btnMic").onclick = () => dictar($("btnMic"), (t) => {
+  const c = limpiarRuta(t.replace(/\s*\b(barra|slash)\b\s*/gi, "/"));
+  if (c) { $("carpeta").value = c; recordarCarpeta(c); toast("📁 " + c); }
+});
+$("btnMicTitulo").onclick = () => dictar($("btnMicTitulo"), (t) => { $("titulo").value = t; });
+
+// ---------- Título de cada foto ----------
+function titulosRecientes() { try { return JSON.parse(localStorage.getItem("fotopc_titulos")) || []; } catch (e) { return []; } }
+function recordarTitulo(t) {
+  if (!t) return;
+  const l = [t, ...titulosRecientes().filter((x) => x !== t)].slice(0, 12);
+  try { localStorage.setItem("fotopc_titulos", JSON.stringify(l)); } catch (e) {}
+}
+// Muestra la vista previa y pide el título. onRepetir se llama dentro del clic (necesario en iPhone).
+function pedirTitulo(blobPrevia, onRepetir) {
+  return new Promise((res) => {
+    const url = URL.createObjectURL(blobPrevia);
+    $("tituloImg").src = url;
+    $("titulo").value = "";
+    $("tituloRepetir").classList.toggle("hidden", !onRepetir);
+    const fin = (v) => { $("vTitulo").classList.add("hidden"); URL.revokeObjectURL(url); res(v); };
+    $("chipsTitulo").innerHTML = "";
+    titulosRecientes().forEach((t) => {
+      const b = document.createElement("button");
+      b.textContent = t;
+      b.onclick = () => fin({ titulo: t });          // un toque y guardado
+      $("chipsTitulo").appendChild(b);
+    });
+    $("tituloOk").onclick = () => fin({ titulo: $("titulo").value });
+    $("tituloSin").onclick = () => fin({ titulo: "" });
+    $("tituloRepetir").onclick = () => { fin({ repetir: true }); if (onRepetir) onRepetir(); };
+    $("titulo").onkeydown = (e) => { if (e.key === "Enter") $("tituloOk").click(); };
+    $("vTitulo").classList.remove("hidden");
+  });
+}
+
 function carpetaActual() {
   const c = limpiarRuta($("carpeta").value) || "Sin_carpeta";
   $("carpeta").value = c;
@@ -34,7 +105,7 @@ function carpetaActual() {
 // ---------- Historial ----------
 function hist() { try { return JSON.parse(localStorage.getItem("fotopc_hist")) || []; } catch (e) { return []; } }
 function guardarHist(h) { try { localStorage.setItem("fotopc_hist", JSON.stringify(h.slice(0, 40))); } catch (e) {} pintarHist(); }
-function addHist(path) { guardarHist([{ path, estado: "pendiente", fecha: Date.now() }, ...hist()]); }
+function addHist(path, vista) { guardarHist([{ path, vista, estado: "pendiente", fecha: Date.now() }, ...hist()]); }
 function setHist(path, estado) { guardarHist(hist().map((x) => (x.path === path ? { ...x, estado } : x))); }
 
 function pintarHist() {
@@ -44,37 +115,26 @@ function pintarHist() {
   const icono = { pendiente: "⏳", subida: "✅", error: "⚠️" };
   h.forEach((x) => {
     const li = document.createElement("li");
-    const partes = x.path.split("/");
+    const partes = (x.vista || x.path).split("/");
     li.innerHTML = `<span>${icono[x.estado] || ""}</span>
       <span class="grow"><b>${partes.pop()}</b><br><small class="muted">${partes.join("/")}</small></span>`;
-    if (x.estado === "subida") {
-      const b = document.createElement("button");
-      b.className = "link"; b.textContent = "🔗";
-      b.title = "Compartir enlace";
-      b.onclick = () => compartirEnlace(x.path);
-      li.appendChild(b);
-    }
     ul.appendChild(li);
   });
 }
 
-async function compartirEnlace(path) {
-  try {
-    const url = await API.signedUrl(path);
-    if (navigator.share) await navigator.share({ title: path.split("/").pop(), url });
-    else { await navigator.clipboard.writeText(url); toast("Enlace copiado (válido 7 días)"); }
-  } catch (e) {
-    if (e.name !== "AbortError") toast(e.message === "NO_SESSION" ? "Vuelve a entrar" : "No se pudo crear el enlace");
-  }
-}
 
 // ---------- Cola de subida ----------
-async function encolar(blob, ext, tipo) {
+async function encolar(blob, ext, tipo, titulo = "") {
   const carpeta = carpetaActual();
   recordarCarpeta(carpeta);
-  const path = `${carpeta}/${sello()}_${rand()}.${ext}`;
-  await DB.put("cola", { id: path, path, blob, type: tipo, fecha: Date.now() });
-  addHist(path);
+  const nombre = limpiarNombre(titulo);
+  const vista = `${carpeta}/${nombre || sello() + "_" + rand()}.${ext}`;   // "Parte frontal.jpg"
+  if (!Cifra.key) throw new Error("Falta la clave de cifrado");
+  // Se cifra AQUÍ, en el móvil: a internet solo llega contenido ilegible
+  const path = `${API.uid()}/${await Cifra.cifrarNombre(vista)}`;
+  const cifrado = await Cifra.cifrarBlob(blob);
+  await DB.put("cola", { id: path, path, blob: cifrado, type: "application/octet-stream", fecha: Date.now() });
+  addHist(path, vista);
   procesarCola();
 }
 
@@ -114,13 +174,18 @@ async function fotoAJpeg(file) {
   return canvasABlob(c, CONFIG.FOTO_CALIDAD);
 }
 
-$("btnFoto").onclick = () => { $("inFoto").value = ""; $("inFoto").click(); };
+const abrirCamara = () => { $("inFoto").value = ""; $("inFoto").click(); };
+$("btnFoto").onclick = abrirCamara;
 $("inFoto").onchange = async (e) => {
   const f = e.target.files[0];
   if (!f) return;
   try {
-    await encolar(await fotoAJpeg(f), "jpg", "image/jpeg");
-    toast("📤 Foto guardada en " + carpetaActual());
+    const jpg = await fotoAJpeg(f);
+    const r = await pedirTitulo(jpg, abrirCamara);
+    if (r.repetir) return;
+    await encolar(jpg, "jpg", "image/jpeg", r.titulo);
+    recordarTitulo(limpiarNombre(r.titulo));
+    toast(`📤 ${limpiarNombre(r.titulo) || "Foto"} → ${carpetaActual()}`);
   } catch (err) { toast(err.message); }
 };
 
@@ -197,9 +262,13 @@ $("scanFin").onclick = async () => {
   try {
     await guardarPagina();
     const n = paginas.length;
-    await encolar(crearPdf(paginas), "pdf", "application/pdf");
-    toast(`📤 PDF de ${n} página(s) guardado`);
+    const pdf = crearPdf(paginas);
+    const portada = new Blob([paginas[0].jpeg], { type: "image/jpeg" });
     cerrarScan();
+    const r = await pedirTitulo(portada, null);
+    await encolar(pdf, "pdf", "application/pdf", r.titulo);
+    recordarTitulo(limpiarNombre(r.titulo));
+    toast(`📤 PDF de ${n} página(s): ${limpiarNombre(r.titulo) || "documento"}`);
   } catch (err) { toast(err.message); }
   finally { $("scanFin").disabled = false; }
 };
@@ -208,10 +277,18 @@ window.addEventListener("resize", () => { if (editor.img && !$("vScan").classLis
 // ---------- Arranque ----------
 $("carpeta").value = localStorage.getItem("fotopc_actual") || "";
 $("carpeta").addEventListener("change", () => { $("carpeta").value = limpiarRuta($("carpeta").value); pintarCarpetas(); });
+$("carpeta").addEventListener("input", () => { $("btnFoto").textContent = "📷 Foto → " + (limpiarRuta($("carpeta").value) || "Sin_carpeta"); });
 pintarCarpetas();
 pintarHist();
 
-const volverLogin = iniciarLogin(() => { procesarCola(); });
+let ultimaPurga = 0;
+async function purgar() {
+  if (Date.now() - ultimaPurga < 3600e3 || !navigator.onLine) return;
+  ultimaPurga = Date.now();
+  try { await API.purgarAntiguas(24); } catch (e) {}
+}
+const volverLogin = iniciarLogin(() => { procesarCola(); purgar(); });
+setInterval(purgar, 600000);
 window.addEventListener("online", procesarCola);
 setInterval(() => { if (navigator.onLine) procesarCola(); }, 30000);
 

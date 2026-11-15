@@ -56,3 +56,18 @@ details.grupo ul { margin-top: 6px; }
 .overlay .link { color: #93c5fd; }
 .overlay .chips button { background: #334155; color: #fff; }
 .overlay .chips button.on { background: var(--pri); }
+.row-between { display: flex; align-items: center; justify-content: space-between; }
+.row-between label { margin: 0; }
+.input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.input-row input { margin-bottom: 0 !important; flex: 1; }
+.mic { font-size: 1.3rem; padding: 0 14px; }
+.mic.escuchando { background: #dc2626; animation: latido 1s infinite; }
+@keyframes latido { 50% { opacity: .5; } }
+.center-txt { text-align: center; font-size: .9rem; }
+.small-txt { font-size: .85rem; }
+.over2 { z-index: 45; }
+#tituloStage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 8px; }
+#tituloImg { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; }
+.titulo-panel { padding: 0 12px; }
+.titulo-panel input { font-size: 1.1rem; }
+.titulo-panel .chips { margin-bottom: 4px; }

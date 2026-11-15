@@ -82,3 +82,31 @@ La cámara solo funciona en páginas **https**, así que hay que publicarla:
 - **Ordenador de empresa**:
   - Comprueba que tu empresa permite usar este tipo de servicio para fotos del trabajo.
   - Si la página del PC está bloqueada en el portátil, la red de la empresa no deja pasar la conexión y no hay nada que hacer desde la app.
+
+## Versión 2: varias carpetas y varios usuarios
+- **➕ Nueva carpeta** (móvil): propone el siguiente nombre (`Muestra 1` → `Muestra 2`…). El botón de foto muestra a qué carpeta va.
+- Las fotos se quedan en internet **hasta que el PC las descarga**; no caducan. Puedes hacer varias carpetas seguidas y descargarlo todo al final.
+- **Registro con código de invitación**: en la pantalla de entrada, «¿No tienes cuenta? Crear una». El código se guarda en Supabase (`supabase-v2.sql`).
+- **Cada usuario solo ve sus fotos**: se guardan en `fotos/<id-usuario>/<carpeta>/…`.
+- Instalar v2:
+  1. Ejecuta `supabase-v2.sql` en SQL Editor (cambia antes el código).
+  2. En Supabase → Authentication → Sign In / Providers: activa **Allow new users to sign up** y desactiva **Confirm email**.
+  3. Sube a GitHub los archivos cambiados (no subas `config.js`, que ya está bien).
+- Nota: con el código activado, «Add user» del panel de Supabase deja de funcionar; todos se registran desde la app con el código.
+
+## Versión 3: seguridad
+- 🔐 **Cifrado de extremo a extremo** (AES-256-GCM): la foto y el nombre de la carpeta se cifran en el móvil y solo se descifran en el PC. Supabase solo ve archivos ilegibles (`e1Xk3…`).
+  - La clave de cifrado se pide una vez en cada aparato y nunca sale de él (se guarda como clave no exportable).
+  - Hay que poner la **misma clave** en el móvil y en el PC; la app comprueba que coincide.
+  - Si se olvida, las fotos pendientes no se pueden recuperar. Al pulsar «Salir», se borra del aparato.
+- 🧹 **Borrado a las 24 h**: la app borra lo antiguo cada vez que se abre. Además, `supabase-v3-borrado24h.sql` lo hace en el servidor cada hora, aunque nadie abra la app.
+- ❌ Se ha quitado el botón de enlaces compartibles.
+- 🛡️ Política de seguridad del navegador (CSP): la página solo puede hablar con tu Supabase.
+- Recomendado: verificación en dos pasos en GitHub y Supabase; contraseña mínima de 10 caracteres (Authentication → Providers → Email).
+
+## Versión 4: título en cada foto
+- Después de cada foto aparece la vista previa y el campo **«¿Qué es esta foto?»**. Se puede escribir o dictar con 🎤.
+- El archivo se guarda con ese nombre: `Un armario/Parte frontal.jpg`. Si se repite, el PC añade `(2)`, `(3)`…
+- Los títulos usados recientemente salen como botones: un toque y la foto queda guardada.
+- **Sin título**: se usa la fecha y la hora. **Repetir**: vuelve a abrir la cámara.
+- También funciona con los PDF del escáner.

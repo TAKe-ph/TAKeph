@@ -82,9 +82,22 @@ async function listarTodo(prefix = "") {
   return out;
 }
 
+let ultimaPurga = 0;
 async function refrescar() {
   try {
-    archivos = await listarTodo();
+    const uid = API.uid();
+    if (Date.now() - ultimaPurga > 600000) { ultimaPurga = Date.now(); const n = await API.purgarAntiguas(24); if (n) log(`🧹 ${n} archivo(s) con más de 24 h borrados de internet`); }
+    const lista = await listarTodo(uid);
+    archivos = [];
+    for (const a of lista) {
+      const rel = a.path.slice(uid.length + 1);
+      if (!rel.includes("/") && Cifra.esCifrado(rel)) {
+        try { archivos.push({ ...a, vista: await Cifra.descifrarNombre(rel), cifrado: true }); }
+        catch (e) { archivos.push({ ...a, vista: null, cifrado: true }); }   // otra clave
+      } else {
+        archivos.push({ ...a, vista: rel, cifrado: false });                 // archivos antiguos sin cifrar
+      }
+    }
   } catch (e) {
     if (e.message === "NO_SESSION") { volverLogin(); return; }
     $("lista").innerHTML = `<p class="err">${e.message}</p>`;
@@ -99,7 +112,8 @@ function pintarLista() {
   $("btnDescargar").disabled = false;
   const grupos = {};
   archivos.forEach((a) => {
-    const c = a.path.includes("/") ? a.path.slice(0, a.path.lastIndexOf("/")) : "(raíz)";
+    const c = a.vista === null ? "🔒 No se pueden abrir (cifrados con otra clave)"
+      : a.vista.includes("/") ? a.vista.slice(0, a.vista.lastIndexOf("/")) : "(raíz)";
     (grupos[c] = grupos[c] || []).push(a);
   });
   cont.innerHTML = "";
@@ -109,7 +123,7 @@ function pintarLista() {
     det.className = "grupo";
     const total = g.reduce((s, a) => s + a.size, 0);
     det.innerHTML = `<summary><span class="grow">📁 <b>${c}</b> <small class="muted">· ${g.length} archivo(s) · ${tamano(total)}</small></span></summary>
-      <ul class="list small">${g.map((a) => `<li><span class="grow">${a.path.split("/").pop()}</span><small class="muted">${tamano(a.size)}</small></li>`).join("")}</ul>`;
+      <ul class="list small">${g.map((a) => `<li><span class="grow">${a.vista ? a.vista.split("/").pop() : "🔒 archivo"}</span><small class="muted">${tamano(a.size)}</small></li>`).join("")}</ul>`;
     const b = document.createElement("button");
     b.className = "secondary"; b.textContent = "⬇️ Esta carpeta";
     b.onclick = (e) => { e.preventDefault(); descargar(g); };
@@ -128,11 +142,12 @@ async function descargar(lista, auto = false) {
   ocupado = true;
   $("btnDescargar").disabled = true;
   let ok = 0;
-  for (const a of lista) {
+  for (const a of lista.filter((x) => x.vista !== null)) {
     try {
-      const blob = await API.download(a.path);
-      const donde = await guardar(a.path, blob);
-      if ($("chkBorrar").checked) await API.remove([a.path]);
+      let blob = await API.download(a.path);
+      if (a.cifrado) blob = await Cifra.descifrarBlob(blob);   // se descifra AQUÍ, en tu PC
+      const donde = await guardar(a.vista, blob);
+      await API.remove([a.path]);
       log(`✅ ${donde}`, "ok");
       ok++;
     } catch (e) {
@@ -146,6 +161,8 @@ async function descargar(lista, auto = false) {
 }
 
 $("btnDescargar").onclick = () => descargar(archivos);
+// Si hay archivos que no se pueden abrir, no cuentan para el botón
+
 $("btnRefrescar").onclick = refrescar;
 
 // ---------- Modo automático ----------
@@ -154,13 +171,11 @@ $("chkAuto").onchange = async () => {
   localStorage.setItem("fotopc_auto", $("chkAuto").checked ? "1" : "0");
   if ($("chkAuto").checked && hayFS) { await permiso(true); pintarDestino(); }
 };
-$("chkBorrar").checked = localStorage.getItem("fotopc_borrar") !== "0";
-$("chkBorrar").onchange = () => localStorage.setItem("fotopc_borrar", $("chkBorrar").checked ? "1" : "0");
 
 setInterval(async () => {
   if (!$("chkAuto").checked || ocupado || $("vMain").classList.contains("hidden")) return;
   await refrescar();
-  if (archivos.length) descargar(archivos, true);
+  if (archivos.some((a) => a.vista !== null)) descargar(archivos, true);
 }, 20000);
 
 // ---------- Arranque ----------
