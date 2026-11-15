@@ -294,7 +294,87 @@ async function fotoAJpeg(file) {
 }
 
 const abrirCamara = () => { $("inFoto").value = ""; $("inFoto").click(); };
-$("btnFoto").onclick = abrirCamara;
+$("btnFoto").onclick = () => abrirCamaraApp();
+
+// ---------- Cámara integrada: dispara seguido sin salir de la app ----------
+let camStream = null, camCuenta = 0, linterna = false;
+async function abrirCamaraApp() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return abrirCamara();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } },
+    });
+  } catch (e) {
+    toast("Sin permiso de cámara: abro la cámara del móvil");
+    return abrirCamara();
+  }
+  const v = $("camVideo");
+  v.srcObject = camStream;
+  try { await v.play(); } catch (e) {}
+  camCuenta = 0; linterna = false;
+  $("camCuenta").textContent = "0";
+  $("camCarpeta").textContent = "📁 " + carpetaActual() + " ▾";
+  const track = camStream.getVideoTracks()[0];
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  $("camLinterna").classList.toggle("hidden", !caps.torch);
+  $("vCamara").classList.remove("hidden");
+}
+function cerrarCamaraApp() {
+  if (camStream) camStream.getTracks().forEach((t) => t.stop());
+  camStream = null;
+  $("camVideo").srcObject = null;
+  $("vCamara").classList.add("hidden");
+}
+$("camCerrar").onclick = cerrarCamaraApp;
+$("camNativa").onclick = () => { cerrarCamaraApp(); abrirCamara(); };
+$("camLinterna").onclick = async () => {
+  linterna = !linterna;
+  try { await camStream.getVideoTracks()[0].applyConstraints({ advanced: [{ torch: linterna }] }); } catch (e) {}
+};
+// Tocar la carpeta: pasar a la siguiente muestra sin salir de la cámara
+$("camCarpeta").onclick = () => {
+  const n = prompt("Carpeta para las próximas fotos", siguienteNombre(carpetaActual()));
+  if (n === null) return;
+  const c = limpiarRuta(n);
+  if (!c) return;
+  $("carpeta").value = c; recordarCarpeta(c);
+  camCuenta = 0; $("camCuenta").textContent = "0";
+  $("camCarpeta").textContent = "📁 " + c + " ▾";
+};
+$("camDisparo").onclick = async () => {
+  const v = $("camVideo");
+  if (!v.videoWidth) return;
+  const s = Math.min(1, CONFIG.FOTO_MAX_PX / Math.max(v.videoWidth, v.videoHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+  c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+  const f = $("camFlash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+  try {
+    const jpg = await canvasABlob(c, CONFIG.FOTO_CALIDAD);
+    const r = await pedirTitulo(jpg, () => {});        // "Repetir" = volver a la cámara
+    if (r.repetir) return;
+    await encolar(jpg, "jpg", "image/jpeg", r.titulo);
+    recordarTitulo(limpiarNombre(r.titulo));
+    camCuenta++; $("camCuenta").textContent = camCuenta;
+    toast(`📤 ${limpiarNombre(r.titulo) || "Foto"} → ${carpetaActual()}`);
+  } catch (err) { toast(err.message); }
+};
+
+// ---------- Ajustes ----------
+$("btnAjustes").onclick = () => {
+  const dentro = !!API.session;
+  menu("⚙️ Ajustes", [
+    ...(dentro ? [
+      { txt: "🔐 Volver a poner la clave de cifrado", fn: async () => {
+        if (!confirm("Se borrará la clave de este móvil y te la pedirá otra vez. Si pones una clave NUEVA, las fotos pendientes cifradas con la antigua no se podrán abrir. ¿Seguir?")) return;
+        await Cifra.olvidar(); location.reload();
+      } },
+      { txt: "🚪 Cerrar sesión", peligro: true, fn: () => $("btnSalir").click() },
+    ] : []),
+    { txt: "ℹ️ TAKePH · fotos cifradas · borrado a las 24 h", fn: () => {} },
+  ]);
+};
 $("inFoto").onchange = async (e) => {
   const f = e.target.files[0];
   if (!f) return;

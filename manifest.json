@@ -1,6 +1,6 @@
 {
-  "name": "FotoPC",
-  "short_name": "FotoPC",
+  "name": "TAKePH",
+  "short_name": "TAKePH",
   "description": "Haz fotos y escanea documentos que llegan directos a una carpeta del PC",
   "start_url": "./index.html",
   "scope": "./",

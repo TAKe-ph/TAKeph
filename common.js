@@ -5,12 +5,8 @@ const $ = (id) => document.getElementById(id);
 
 // ---------- Utilidades ----------
 function limpiarRuta(s) {
-  return (s || "")
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")       // quita tildes (ñ -> n)
-    .split("/")
-    .map((seg) => seg.replace(/[^\w \-.()]/g, "_").trim().replace(/[. ]+$/, ""))
-    .filter(Boolean)
-    .join("/");
+  // Va cifrado, así que se permiten tildes y espacios; solo se quitan símbolos que Windows no acepta
+  return (s || "").split("/").map(limpiarNombre).filter(Boolean).join("/");
 }
 
 // Título libre -> nombre de archivo válido en Windows (mantiene tildes y espacios)
@@ -158,7 +154,7 @@ const API = {
     if (r.ok) return;
     const t = await r.text();
     if (/duplicate|already exists/i.test(t)) return; // ya estaba subida
-    if (r.status === 401 || r.status === 403) { this.logout(); throw new Error("NO_SESSION"); }
+    if (r.status === 401) { this.logout(); throw new Error("NO_SESSION"); }
     throw new Error("Error al subir: " + t);
   },
 
@@ -168,7 +164,7 @@ const API = {
       headers: await this.headers({ "Content-Type": "application/json" }),
       body: JSON.stringify({ prefix, limit: 1000, offset: 0, sortBy: { column: "name", order: "asc" } }),
     });
-    if (r.status === 401 || r.status === 403) { this.logout(); throw new Error("NO_SESSION"); }
+    if (r.status === 401) { this.logout(); throw new Error("NO_SESSION"); }
     if (!r.ok) throw new Error("Error al listar: " + (await r.text()));
     return r.json();
   },

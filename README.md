@@ -1,4 +1,4 @@
-# 📷 FotoPC
+# 📷 TAKePH
 
 Haces una foto (o escaneas un documento) en el móvil y llega sola a la carpeta que tú elijas en el PC.
 
@@ -115,3 +115,13 @@ La cámara solo funciona en páginas **https**, así que hay que publicarla:
 - Móvil → **✏️ Editar** (junto a las carpetas): toca una carpeta para **cambiarle el nombre** (también a sus fotos pendientes), **quitarla de la lista** o **borrar sus fotos pendientes**.
 - Móvil → **Últimas subidas**: toca una foto para **cambiarle el nombre**, **moverla a otra carpeta** o **borrarla**.
 - Solo se puede mientras la foto no ha llegado al PC. Si ya llegó (💻), se cambia en el Explorador de Windows.
+
+## Versión final
+- **Nombre:** TAKePH. Dirección única: https://take-ph.github.io/TAKeph/ (el móvil abre la cámara y el PC abre la página de recibir).
+- **📷 Cámara integrada:** la cámara se ve en directo dentro de la app y dispara seguido. Después de cada foto se pone el título (un toque con los títulos recientes).
+  - 📁 Arriba: toca la carpeta para pasar a la siguiente muestra sin salir de la cámara.
+  - 🔦 Linterna (si el móvil lo permite).
+  - 📱 Abre la cámara normal del móvil, que da más calidad y zoom.
+- **⚙️ Ajustes** (móvil): volver a poner la clave de cifrado y cerrar sesión.
+- Las carpetas admiten tildes y espacios («Armario pequeño»).
+- En el PC, la pestaña muestra cuántos archivos hay pendientes: «(3) TAKePH».

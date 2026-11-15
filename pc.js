@@ -108,6 +108,8 @@ async function refrescar() {
 
 function pintarLista() {
   const cont = $("lista");
+  const n = archivos.filter((a) => a.vista !== null).length;
+  document.title = (n ? `(${n}) ` : "") + "TAKePH – Recibir";
   if (!archivos.length) { cont.innerHTML = '<p class="muted">No hay nada pendiente. 👌</p>'; $("btnDescargar").disabled = true; return; }
   $("btnDescargar").disabled = false;
   const grupos = {};

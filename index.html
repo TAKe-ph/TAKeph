@@ -10,13 +10,16 @@
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
-  <title>FotoPC</title>
+  <title>TAKePH</title>
   <script src="redirect.js"></script>
 </head>
 <body>
   <header>
-    <h1>📷 FotoPC</h1>
-    <button id="btnSalir" class="link hidden">Salir</button>
+    <h1>📷 TAKePH</h1>
+    <span>
+      <button id="btnAjustes" class="link" title="Ajustes">⚙️</button>
+      <button id="btnSalir" class="link hidden oculto">Salir</button>
+    </span>
   </header>
 
   <!-- LOGIN -->
@@ -90,6 +93,26 @@
       <button id="scanRetry" class="link">Repetir</button>
       <button id="scanAdd" class="secondary">+ Página</button>
       <button id="scanFin" class="primary">Subir PDF (<span id="nPag">1</span>)</button>
+    </div>
+  </section>
+
+  <!-- CÁMARA INTEGRADA -->
+  <section id="vCamara" class="overlay hidden">
+    <div class="cam-top">
+      <button id="camCarpeta" class="cam-carpeta" title="Cambiar carpeta">📁</button>
+      <span id="camCuenta" class="badge">0</span>
+    </div>
+    <div id="camStage">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <div id="camFlash" class="cam-flash"></div>
+    </div>
+    <div class="cam-bar">
+      <button id="camCerrar" class="link">✅ Listo</button>
+      <button id="camDisparo" class="disparo" aria-label="Hacer foto"></button>
+      <div class="derecha">
+        <button id="camLinterna" class="link hidden" title="Linterna">🔦</button>
+        <button id="camNativa" class="link" title="Cámara del móvil">📱</button>
+      </div>
     </div>
   </section>
 
