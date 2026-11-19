@@ -358,8 +358,44 @@ async function abrirCamaraApp() {
   const track = camStream.getVideoTracks()[0];
   const caps = track.getCapabilities ? track.getCapabilities() : {};
   $("camLinterna").classList.toggle("hidden", !caps.torch);
+  prepararZoom(caps);
   $("vCamara").classList.remove("hidden");
 }
+// ---------- Zoom: solo cambia cuando tú lo eliges ----------
+// Si el móvil permite zoom real (cambio de objetivo) se usa; si no, zoom digital recortando el centro.
+let zoomHW = null, zoomDig = 1;
+function prepararZoom(caps) {
+  const cont = $("camZoom");
+  cont.innerHTML = "";
+  let niveles;
+  if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+    zoomHW = caps.zoom;
+    niveles = [0.5, 1, 2, 3, 5].filter((z) => z >= caps.zoom.min - 0.01 && z <= caps.zoom.max + 0.01);
+    if (!niveles.includes(1)) niveles.unshift(Math.max(1, caps.zoom.min));
+  } else {
+    zoomHW = null;
+    niveles = [1, 2, 3, 5];
+  }
+  niveles.forEach((z) => {
+    const b = document.createElement("button");
+    b.textContent = (z < 1 ? ".5" : z) + "×";
+    b.dataset.z = z;
+    b.onclick = () => ponerZoom(z);
+    cont.appendChild(b);
+  });
+  ponerZoom(1);   // empieza siempre en 1×
+}
+async function ponerZoom(z) {
+  if (zoomHW && camStream) {
+    try { await camStream.getVideoTracks()[0].applyConstraints({ advanced: [{ zoom: z }] }); } catch (e) {}
+    zoomDig = 1;
+  } else {
+    zoomDig = z;
+  }
+  $("camVideo").style.transform = zoomDig > 1 ? `scale(${zoomDig})` : "";
+  document.querySelectorAll("#camZoom button").forEach((b) => b.classList.toggle("on", +b.dataset.z === z));
+}
+
 function cerrarCamaraApp() {
   if (camStream) camStream.getTracks().forEach((t) => t.stop());
   camStream = null;
@@ -385,10 +421,13 @@ $("camCarpeta").onclick = () => {
 $("camDisparo").onclick = async () => {
   const v = $("camVideo");
   if (!v.videoWidth) return;
-  const s = Math.min(1, CONFIG.FOTO_MAX_PX / Math.max(v.videoWidth, v.videoHeight));
+  // Zoom digital: se recorta el centro, igual que se ve en pantalla
+  const sw = v.videoWidth / zoomDig, sh = v.videoHeight / zoomDig;
+  const sx = (v.videoWidth - sw) / 2, sy = (v.videoHeight - sh) / 2;
+  const s = Math.min(1, CONFIG.FOTO_MAX_PX / Math.max(sw, sh));
   const c = document.createElement("canvas");
-  c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
-  c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+  c.width = Math.round(sw * s); c.height = Math.round(sh * s);
+  c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
   const f = $("camFlash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
   try {
     const jpg = await canvasABlob(c, CONFIG.FOTO_CALIDAD);

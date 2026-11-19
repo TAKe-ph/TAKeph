@@ -80,7 +80,7 @@ details.grupo ul { margin-top: 6px; }
 #historial li.tocable { cursor: pointer; }
 .oculto { display: none !important; }
 #camStage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-#camVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+#camVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; transform-origin: center; transition: transform .15s; }
 .cam-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top) + 10px) 14px 8px; }
 .cam-carpeta { background: rgba(255,255,255,.15); color: #fff; font-weight: 600; border-radius: 99px; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
@@ -96,3 +96,18 @@ details.grupo ul { margin-top: 6px; }
 html, body, button, label, input { touch-action: manipulation; }
 label.boton { display: flex; align-items: center; justify-content: center; margin: 0; border-radius: 10px; padding: 14px 8px; font-weight: 600; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .scan-bar > * { flex: 1; }
+/* Cámara a pantalla completa: los botones van encima de la imagen */
+#vCamara { display: block; }
+#vCamara #camStage { position: absolute; inset: 0; padding: 0; }
+#vCamara .cam-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2; background: linear-gradient(rgba(0,0,0,.55), transparent); }
+#vCamara .cam-bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: linear-gradient(transparent, rgba(0,0,0,.6)); }
+.cam-zoom { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 125px); z-index: 2; display: flex; gap: 10px; }
+.cam-zoom button { width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; font-weight: 700; font-size: .85rem; padding: 0; }
+.cam-zoom button.on { background: #fff; color: #000; }
+@media (orientation: landscape) {
+  #vCamara .cam-bar { top: 0; left: auto; width: 120px; display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+    padding: 14px calc(env(safe-area-inset-right) + 10px) 14px 10px; background: linear-gradient(90deg, transparent, rgba(0,0,0,.6)); }
+  #vCamara .cam-bar .derecha { flex-direction: column; }
+  #vCamara .cam-top { right: 140px; padding-left: calc(env(safe-area-inset-left) + 14px); }
+  .cam-zoom { left: auto; bottom: auto; top: 50%; transform: translateY(-50%); right: calc(env(safe-area-inset-right) + 135px); flex-direction: column; }
+}
